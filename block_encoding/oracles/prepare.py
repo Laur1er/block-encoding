@@ -3,7 +3,7 @@ import numpy as np
 from qiskit.circuit import QuantumCircuit
 from qiskit.quantum_info import SparsePauliOp
 
-from block_encoding import BinaryAmplitudeTree
+from block_encoding.oracles.binary_tree import BinaryAmplitudeTree
 
 
 def build_prepare_oracle(matrix: SparsePauliOp):
@@ -20,17 +20,18 @@ def build_prepare_oracle(matrix: SparsePauliOp):
 
     ctrl_qubits = []
     for i, angles in enumerate(rotation_angles):
+        target = num_qubits - 1 - i
         if i == 0:
-            circuit.ry(angles[0], i)
+            circuit.ry(angles[0], target)
         else:
             for j, angle in enumerate(angles):
-                ctrl_state = np.array(list(f"{j:0{i}b}")[::-1], dtype=int)
-                zero_bits = np.where(ctrl_state == 0)[0]
-                if zero_bits.size > 0:
+                ctrl_state = np.array([int(b) for b in f"{j:0{i}b}"], dtype=int)
+                zero_bits = [ctrl_qubits[k] for k in np.where(ctrl_state == 0)[0]]
+                if zero_bits:
                     circuit.x(zero_bits)
-                circuit.mcry(angle, ctrl_qubits, i)
-                if zero_bits.size > 0:
+                circuit.mcry(angle, ctrl_qubits, target)
+                if zero_bits:
                     circuit.x(zero_bits)
-        ctrl_qubits.append(i)
+        ctrl_qubits.append(target)
 
     return circuit
