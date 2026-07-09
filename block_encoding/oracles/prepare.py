@@ -1,12 +1,12 @@
 import numpy as np
 
-from qiskit.circuit import QuantumCircuit
+from qiskit.circuit import QuantumCircuit, Gate
 from qiskit.quantum_info import SparsePauliOp
 
 from block_encoding.oracles.binary_tree import BinaryAmplitudeTree
 
 
-def build_prepare_oracle(matrix: SparsePauliOp):
+def build_prepare_oracle(matrix: SparsePauliOp) -> tuple[Gate, float]:
     """
     Prepare the PREPARE oracle for a matrix given as a linear combinaison of Pauli strings.
     """
@@ -34,4 +34,4 @@ def build_prepare_oracle(matrix: SparsePauliOp):
                     circuit.x(zero_bits)
         ctrl_qubits.append(target)
 
-    return circuit
+    return circuit.to_gate(label="PREPARE"), tree.s

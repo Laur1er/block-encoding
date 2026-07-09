@@ -1,4 +1,5 @@
 import cmath
+import math
 import numpy as np
 
 from qiskit.circuit import QuantumCircuit, QuantumRegister, Gate
@@ -7,13 +8,13 @@ from qiskit.quantum_info import Pauli, SparsePauliOp
 
 def pauli_rotation_circuit(pauli: Pauli) -> Gate:
     """
-    Construct the `QuantumCircuit` for the rotation of a single Pauli string `e^(-i * Pauli)`.
+    Construct the `QuantumCircuit` for the rotation of a single Pauli string.
 
     Args:
         pauli (Pauli): The Pauli string to evolve
 
     Returns:
-        QuantumCircuit: The circuit of the Pauli rotation
+        Gate: The gate of the Pauli rotation
     """
     nb_qubits = len(pauli)
     circuit = QuantumCircuit(nb_qubits)
@@ -53,14 +54,16 @@ def apply_phase(num_qubit_index: int, index: int, phase: float) -> Gate:
     circuit.p(phase, num_qubit_index)
     circuit.mcx(ctrl_qubits, num_qubit_index, ctrl_state=ctrl_state)
 
-    return circuit.to_gate(label=f"Phase {phase}")
+    return circuit.to_gate(label=f"Phase {phase:.2f}")
 
 
 def build_select_oracle(matrix: SparsePauliOp):
     """
     Prepare the SELECT oracle given a linear combinaison of unitaries (LCU) in order block-encode.
     """
-    num_qubit_index = len(f"{len(matrix.coeffs):b}")
+    num_qubit_index = (
+        math.ceil(math.log2(len(matrix.coeffs))) if len(matrix.coeffs) > 1 else 0
+    )
     num_qubits_unitary = matrix.num_qubits
 
     index_reg = QuantumRegister(num_qubit_index, "j")
