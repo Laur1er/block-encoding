@@ -25,7 +25,7 @@ from block_encoding import build_prepare_oracle
 def test_prepare_oracle(matrices: tuple):
     coeffs, paulis = matrices
     matrix = SparsePauliOp(paulis, coeffs)
-    circuit = build_prepare_oracle(matrix)
+    circuit, _ = build_prepare_oracle(matrix)
 
     state_vector = Statevector(circuit).data
 

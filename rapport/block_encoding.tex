@@ -1,0 +1,38 @@
+\documentclass{article}
+
+% Importation des packages
+\usepackage{graphicx}
+\usepackage{quantikz}
+\usepackage{physics}
+% Credit
+\title{Block-Encoding}
+\author{Laurier Perron}
+\date{\today}
+
+% Content
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+Les matrices non-unitaires posent un problème en informatique quantique comme elles ne conservent pas la norme des vecteurs qu'elles transforment. Ce ne sont pas des opérations qui sont naturelle à effectuer sur un ordinateur quantique. Pour parer à ce problême, plusieurs techniques existent. Ce projet est une implémentation de la méthode block-encoding (avec Qiskit), une technique permetant d'encoder n'importe quelle combinaison linéaire de chaine de Pauli dans le haut gauche d'une transformation plus grande en utilisant un registre auxiliaire d'index.
+
+\section{Cadre théorique}
+Prenons une matrices $A$ non-unitaire sous la forme d'une combinaison linéaire de chaînes de Pauli: $A = \sum_{i=0}^{m-1} \alpha_i P_i$ où $m$ est le nombre de chaînes de Pauli. Simplement, le block-encoding consiste à construire l'unitaire U encodant la matrice A tel que:
+
+$$
+    U = \begin{pmatrix} A/\alpha & \cdot \\ \cdot & \cdot \end{pmatrix}
+$$
+avec $\alpha = \sum_{i=0}^{m-1} |\alpha_i|$
+
+
+\section{Algorithme}
+Afin d'encoder la matrice $A$, nous avons besoin de $a = \log(m) $ qubits ancillaires qui formeront le registre d'index représentant les positions des chaînes de Pauli dans la combinaison linéaire, tandis que le nombre de qubits du registre cible est le même que le nombre de qubits des chaînes de Pauli. Nous devons maintenant construire les deux oracles suivant:
+
+\subsection{Prepare}
+L'objectif de cet oracle est de préparer le registre d'index avec les amplitude représentant la racine carré de la norme des coéfficients tel que:
+$$ PREPARE\ket{0}^{\otimes{a}} = \frac{1}{\sqrt{\alpha}} \sum_{i=0}^{m-1} \sqrt{\alpha_i}\ket{i}$$
+Pour ce faire, on doit utiliser des portes Ry et des portes Ry controlées. L'utilisation d'un arbre binaire sert d'outil de calcul : il donne à la fois la structure des contrôles et la valeur des angles.
+\subsubsection{Arbre binaire}
+Pour commencer, on utilise 
+\end{document}
