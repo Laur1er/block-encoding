@@ -19,17 +19,14 @@ def encode_LCU(lcu: SparsePauliOp) -> tuple[QuantumCircuit, float]:
 
     index_reg = QuantumRegister(num_qubit_index, "j")
     psi_reg = QuantumRegister(num_qubits_unitary)
-    ancilla_reg = QuantumRegister(1, "a")
 
-    circuit = QuantumCircuit(psi_reg, index_reg, ancilla_reg)
+    circuit = QuantumCircuit(psi_reg, index_reg)
 
     prepare_oracle, factor = build_prepare_oracle(lcu)
     select_oracle = build_select_oracle(lcu)
 
     circuit.compose(prepare_oracle, index_reg, inplace=True)
-    circuit.compose(
-        select_oracle, index_reg[:] + psi_reg[:] + ancilla_reg[:], inplace=True
-    )
+    circuit.compose(select_oracle, index_reg[:] + psi_reg[:], inplace=True)
     circuit.compose(prepare_oracle.inverse(), index_reg, inplace=True)
 
     return circuit, factor

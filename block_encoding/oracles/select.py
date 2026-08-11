@@ -6,7 +6,7 @@ from qiskit.circuit import QuantumCircuit, QuantumRegister, Gate
 from qiskit.quantum_info import Pauli, SparsePauliOp
 
 
-def pauli_rotation_circuit(pauli: Pauli) -> Gate:
+def diagonalise_using_pauli_gadjets(pauli: Pauli) -> Gate:
     """
     Construct the `QuantumCircuit` for the rotation of a single Pauli string.
 
@@ -34,25 +34,25 @@ def pauli_rotation_circuit(pauli: Pauli) -> Gate:
     for j in range(len(active_qubits) - 1):
         circuit.cx(active_qubits[j], active_qubits[j + 1])
 
-    circuit_reversed = circuit.inverse()
-    circuit.z(active_qubits[-1])
-    circuit.compose(circuit_reversed, inplace=True)
-
-    return circuit.to_gate(label=f"{pauli}")
+    return (circuit, active_qubits[-1])
 
 
 def apply_phase(num_qubit_index: int, index: int, phase: float) -> Gate:
     """
-    Apply a phase only if the register is in the good state. Uses one ancilla qubit.
+    Apply the phase of the coefficient only if the register is in the good state.
     """
-    circuit = QuantumCircuit(num_qubit_index + 1)
-    ctrl_state = f"{index:0{num_qubit_index}b}"
+    circuit = QuantumCircuit(num_qubit_index)
 
     ctrl_qubits = list(range(num_qubit_index))
 
-    circuit.mcx(ctrl_qubits, num_qubit_index, ctrl_state=ctrl_state)
-    circuit.p(phase, num_qubit_index)
-    circuit.mcx(ctrl_qubits, num_qubit_index, ctrl_state=ctrl_state)
+    mask = np.where(
+        np.array(list(f"{index:0{num_qubit_index}b}")[::-1]).astype(int) == 0
+    )[0]
+    if mask.size > 0:
+        circuit.x(mask)
+    circuit.mcp(phase, ctrl_qubits[:-1], ctrl_qubits[-1])
+    if mask.size > 0:
+        circuit.x(mask)
 
     return circuit.to_gate(label=f"Phase {phase:.2f}")
 
@@ -67,10 +67,9 @@ def build_select_oracle(matrix: SparsePauliOp):
     num_qubits_unitary = matrix.num_qubits
 
     index_reg = QuantumRegister(num_qubit_index, "j")
-    psi_reg = QuantumRegister(num_qubits_unitary)
-    ancilla_reg = QuantumRegister(1, "a")
+    state_reg = QuantumRegister(num_qubits_unitary)
 
-    circuit = QuantumCircuit(index_reg, psi_reg, ancilla_reg)
+    circuit = QuantumCircuit(index_reg, state_reg)
 
     for i, (coeff, pauli) in enumerate(zip(matrix.coeffs, matrix.paulis)):
         _, phase = cmath.polar(coeff)
@@ -78,15 +77,27 @@ def build_select_oracle(matrix: SparsePauliOp):
         # Appliquer la phase si nécéssaire.
         if phase != 0:
             phase_gate = apply_phase(num_qubit_index, i, phase)
-            circuit.compose(phase_gate, index_reg[:] + ancilla_reg[:], inplace=True)
+            circuit.compose(phase_gate, index_reg[:], inplace=True)
 
         # Appliquer la rotation de la chaine de Pauli
-        pauli_rotation = pauli_rotation_circuit(pauli)
-        controlled_pauli_rotation = pauli_rotation.control(
-            num_ctrl_qubits=num_qubit_index, ctrl_state=f"{i:0{num_qubit_index}b}"
+        diagonalisation, active_qubit = diagonalise_using_pauli_gadjets(pauli)
+        circuit.compose(diagonalisation, state_reg[:], inplace=True)
+
+        # Mask car pas ctrl_state
+        mask = np.where(
+            np.array(list(f"{i:0{num_qubit_index}b}")[::-1]).astype(int) == 0
+        )[0]
+        if mask.size > 0:
+            circuit.x(index_reg[mask.tolist()])
+
+        circuit.mcp(
+            np.pi,
+            index_reg[:],
+            state_reg[active_qubit],
         )
-        circuit.compose(
-            controlled_pauli_rotation, index_reg[:] + psi_reg[:], inplace=True
-        )
+        if mask.size > 0:
+            circuit.x(index_reg[mask.tolist()])
+
+        circuit.compose(diagonalisation.inverse(), state_reg[:], inplace=True)
 
     return circuit
